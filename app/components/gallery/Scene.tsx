@@ -14,7 +14,7 @@ interface SceneProps {
  */
 const Scene: React.FC<SceneProps> = ({ activeMenu }) => {
   return (
-    <div className="fixed top-0 h-screen w-full bg-transparent">
+    <div className="absolute inset-0 h-full w-full bg-transparent">
       <Canvas
         className="!bg-transparent"
         gl={{ alpha: true, antialias: true }}

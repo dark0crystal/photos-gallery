@@ -26,11 +26,11 @@ const Galleries: React.FC = () => {
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
 
   return (
-    <div className="relative">
-      <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
+    <div className="relative overflow-hidden">
+      <div className="pointer-events-none sticky top-0 z-0 h-screen" aria-hidden>
         <Scene activeMenu={activeMenu} />
       </div>
-      <div className="relative z-10 md:mix-blend-difference">
+      <div className="relative z-10 -mt-[100vh] md:mix-blend-difference">
         <Projects activeMenu={activeMenu} setActiveMenu={setActiveMenu} />
       </div>
       <div className="h-[10vh] md:h-[20vh] lg:h-[40vh]" />
