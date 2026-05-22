@@ -1,8 +1,77 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("/fonts/Thmanyah-Font-Family/thmanyah typeface/thmanyahsans/woff2/thmanyahsans-Regular.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("/fonts/Thmanyah-Font-Family/thmanyah typeface/thmanyahsans/woff2/thmanyahsans-Bold.woff2")
+    format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Thmanyah Serif Display";
+  src: url("/fonts/Thmanyah-Font-Family/thmanyah typeface/thmanyahserifdisplay/woff2/thmanyahserifdisplay-Regular.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Thmanyah Serif Display";
+  src: url("/fonts/Thmanyah-Font-Family/thmanyah typeface/thmanyahserifdisplay/woff2/thmanyahserifdisplay-Medium.woff2")
+    format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Thmanyah Serif Display";
+  src: url("/fonts/Thmanyah-Font-Family/thmanyah typeface/thmanyahserifdisplay/woff2/thmanyahserifdisplay-Bold.woff2")
+    format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Thmanyah Serif Display";
+  src: url("/fonts/Thmanyah-Font-Family/thmanyah typeface/thmanyahserifdisplay/woff2/thmanyahserifdisplay-Black.woff2")
+    format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-thmanyah: "Thmanyah Sans", system-ui, sans-serif;
+  --font-thmanyah-display: "Thmanyah Serif Display", "Thmanyah Sans", system-ui, sans-serif;
+  color-scheme: dark;
+  --background: #1a1916;
+  --foreground: #eceae4;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #1a1916;
+  --foreground: #eceae4;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --background: #f3f3eb;
+  --foreground: #141414;
 }
 
 @theme inline {
@@ -12,15 +81,63 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-thmanyah), var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* ── Global navbar row ─────────────────────────────────────────────────────── */
+.nav-bar {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.nav-bar > * {
+  pointer-events: auto;
+}
+
+/* Smooth theme change across the page */
+html.theme-transition,
+html.theme-transition body {
+  transition:
+    background-color 0.72s cubic-bezier(0.33, 1, 0.68, 1),
+    color 0.72s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+html.theme-transition :where(:not(.theme-toggle):not(.theme-toggle *)) {
+  transition:
+    background-color 0.72s cubic-bezier(0.33, 1, 0.68, 1),
+    color 0.72s cubic-bezier(0.33, 1, 0.68, 1),
+    border-color 0.72s cubic-bezier(0.33, 1, 0.68, 1),
+    fill 0.72s cubic-bezier(0.33, 1, 0.68, 1),
+    stroke 0.72s cubic-bezier(0.33, 1, 0.68, 1),
+    box-shadow 0.72s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.72s;
+  animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transition,
+  html.theme-transition body,
+  html.theme-transition :where(:not(.theme-toggle):not(.theme-toggle *)) {
+    transition: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
 }
