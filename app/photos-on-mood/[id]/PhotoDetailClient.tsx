@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TransitionLink } from "@/app/components/transitions/TransitionLink";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -44,6 +44,12 @@ export default function PhotoDetailClient({
   const imgX = useTransform(springX, (v) => v * 10);
   const imgY = useTransform(springY, (v) => v * 7);
 
+  const [iosHint, setIosHint] = useState(false);
+  const iosCleanup = useRef<(() => void) | null>(null);
+
+  // Clean up iOS gyroscope listener on unmount
+  useEffect(() => () => { iosCleanup.current?.(); }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!window.matchMedia("(pointer: coarse)").matches) return;
@@ -72,19 +78,14 @@ export default function PhotoDetailClient({
       window.addEventListener("orientationchange", recalibrate, { passive: true });
     };
 
+    // iOS 13+ requires an explicit user gesture — show Arabic prompt button
     if (typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission === "function") {
-      const reqOnGesture = async () => {
-        try {
-          const res = await (DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }).requestPermission();
-          if (res === "granted") start();
-        } catch {}
-      };
-      document.addEventListener("click", reqOnGesture, { once: true });
-      return () => {
-        document.removeEventListener("click", reqOnGesture);
+      iosCleanup.current = () => {
         window.removeEventListener("deviceorientation", onOrientation);
         window.removeEventListener("orientationchange", recalibrate);
       };
+      setIosHint(true);
+      return iosCleanup.current;
     }
 
     start();
@@ -93,6 +94,29 @@ export default function PhotoDetailClient({
       window.removeEventListener("orientationchange", recalibrate);
     };
   }, [rawX, rawY]);
+
+  const handleIosMotion = async () => {
+    setIosHint(false);
+    try {
+      const res = await (DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }).requestPermission();
+      if (res !== "granted") return;
+      let base = { beta: 0, gamma: 0, calibrated: false };
+      const onOri = (e: DeviceOrientationEvent) => {
+        const beta = e.beta ?? 0;
+        const gamma = e.gamma ?? 0;
+        if (!base.calibrated) { base.beta = beta; base.gamma = gamma; base.calibrated = true; }
+        rawX.set(Math.max(-1, Math.min(1, (gamma - base.gamma) / 20)));
+        rawY.set(Math.max(-1, Math.min(1, (beta - base.beta) / 20)));
+      };
+      const recalib = () => { base = { beta: 0, gamma: 0, calibrated: false }; };
+      window.addEventListener("deviceorientation", onOri, { passive: true });
+      window.addEventListener("orientationchange", recalib, { passive: true });
+      iosCleanup.current = () => {
+        window.removeEventListener("deviceorientation", onOri);
+        window.removeEventListener("orientationchange", recalib);
+      };
+    } catch {}
+  };
 
   return (
     <div
@@ -163,6 +187,25 @@ export default function PhotoDetailClient({
           gap: "clamp(2rem, 4vh, 3rem)",
         }}
       >
+        {/* iOS motion permission prompt */}
+        {iosHint && (
+          <button
+            onClick={handleIosMotion}
+            style={{
+              background: "color-mix(in oklab, var(--foreground) 8%, transparent)",
+              border: "1px solid color-mix(in oklab, var(--foreground) 15%, transparent)",
+              borderRadius: "999px",
+              padding: "0.45rem 1.1rem",
+              fontSize: "0.8rem",
+              color: "var(--foreground)",
+              cursor: "pointer",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            اضغط للسماح بحركة الجهاز
+          </button>
+        )}
+
         {/* Image */}
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}

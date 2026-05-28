@@ -154,6 +154,11 @@ export function PhotographerCollage({
   const [layout, setLayout] = useState<LayoutState | null>(null);
   const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
   const reduced = !!useReducedMotion();
+  const [iosHint, setIosHint] = useState(false);
+  const iosCleanup = useRef<(() => void) | null>(null);
+
+  // Clean up iOS gyroscope listener on unmount
+  useEffect(() => () => { iosCleanup.current?.(); }, []);
 
   const rawX = useMotionValue(0);
   const rawY = useMotionValue(0);
@@ -244,20 +249,14 @@ export function PhotographerCollage({
       window.addEventListener("orientationchange", recalibrate, { passive: true });
     };
 
-    // iOS 13+ requires a user gesture before permission can be granted
+    // iOS 13+ requires an explicit user gesture — show Arabic prompt button
     if (typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission === "function") {
-      const reqOnGesture = async () => {
-        try {
-          const res = await (DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }).requestPermission();
-          if (res === "granted") start();
-        } catch {}
-      };
-      document.addEventListener("click", reqOnGesture, { once: true });
-      return () => {
-        document.removeEventListener("click", reqOnGesture);
+      iosCleanup.current = () => {
         window.removeEventListener("deviceorientation", onOrientation);
         window.removeEventListener("orientationchange", recalibrate);
       };
+      setIosHint(true);
+      return iosCleanup.current;
     }
 
     start();
@@ -281,6 +280,29 @@ export function PhotographerCollage({
   const scaledW = layout ? layout.patchW * computedScale : 0;
   const scaledH = layout ? layout.patchH * computedScale : 0;
 
+  const handleIosMotion = async () => {
+    setIosHint(false);
+    try {
+      const res = await (DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }).requestPermission();
+      if (res !== "granted") return;
+      let base = { beta: 0, gamma: 0, calibrated: false };
+      const onOri = (e: DeviceOrientationEvent) => {
+        const beta = e.beta ?? 0;
+        const gamma = e.gamma ?? 0;
+        if (!base.calibrated) { base.beta = beta; base.gamma = gamma; base.calibrated = true; }
+        rawX.set(Math.max(-1, Math.min(1, (gamma - base.gamma) / 20)));
+        rawY.set(Math.max(-1, Math.min(1, (beta - base.beta) / 20)));
+      };
+      const recalib = () => { base = { beta: 0, gamma: 0, calibrated: false }; };
+      window.addEventListener("deviceorientation", onOri, { passive: true });
+      window.addEventListener("orientationchange", recalib, { passive: true });
+      iosCleanup.current = () => {
+        window.removeEventListener("deviceorientation", onOri);
+        window.removeEventListener("orientationchange", recalib);
+      };
+    } catch {}
+  };
+
   if (!layout) {
     return (
       <div
@@ -295,6 +317,15 @@ export function PhotographerCollage({
       ref={stageRef}
       className="relative min-h-[min(58dvh,560px)] w-full flex-1 overflow-hidden touch-pan-y"
     >
+      {iosHint && (
+        <button
+          onClick={handleIosMotion}
+          className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-foreground/10 px-4 py-2 text-sm text-foreground backdrop-blur-sm border border-foreground/15"
+          dir="rtl"
+        >
+          اضغط للسماح بحركة الجهاز
+        </button>
+      )}
       <div className="absolute inset-0 z-[1] flex items-center justify-center overflow-hidden">
         {/* Outer box matches visual size so scale() does not reserve unscaled width (desktop clip). */}
         <div

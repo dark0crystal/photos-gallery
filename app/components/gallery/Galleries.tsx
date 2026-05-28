@@ -1,10 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Lenis from "lenis";
 import Scene from "./Scene";
 import Projects from "./Projects";
 
 const Galleries: React.FC = () => {
+  useEffect(() => {
+    const lenis = new Lenis();
+    let frame = 0;
+
+    function raf(time: number) {
+      lenis.raf(time);
+      frame = requestAnimationFrame(raf);
+    }
+
+    frame = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      lenis.destroy();
+    };
+  }, []);
+
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
 
   return (
