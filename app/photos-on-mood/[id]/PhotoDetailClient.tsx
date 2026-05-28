@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useEffect } from "react";
 import { TransitionLink } from "@/app/components/transitions/TransitionLink";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -35,6 +36,63 @@ export default function PhotoDetailClient({
 }: Props) {
   const aspect = width / height;
   const isPortrait = aspect < 1;
+
+  const rawX = useMotionValue(0);
+  const rawY = useMotionValue(0);
+  const springX = useSpring(rawX, { stiffness: 90, damping: 20, mass: 0.4 });
+  const springY = useSpring(rawY, { stiffness: 90, damping: 20, mass: 0.4 });
+  const imgX = useTransform(springX, (v) => v * 10);
+  const imgY = useTransform(springY, (v) => v * 7);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let base = { beta: 0, gamma: 0, calibrated: false };
+
+    const onOrientation = (e: DeviceOrientationEvent) => {
+      const beta = e.beta ?? 0;
+      const gamma = e.gamma ?? 0;
+      if (!base.calibrated) {
+        base.beta = beta;
+        base.gamma = gamma;
+        base.calibrated = true;
+      }
+      rawX.set(Math.max(-1, Math.min(1, (gamma - base.gamma) / 20)));
+      rawY.set(Math.max(-1, Math.min(1, (beta - base.beta) / 20)));
+    };
+
+    const recalibrate = () => {
+      base = { beta: 0, gamma: 0, calibrated: false };
+    };
+
+    const start = () => {
+      window.addEventListener("deviceorientation", onOrientation, { passive: true });
+      window.addEventListener("orientationchange", recalibrate, { passive: true });
+    };
+
+    if (typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission === "function") {
+      const reqOnGesture = async () => {
+        try {
+          const res = await (DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }).requestPermission();
+          if (res === "granted") start();
+        } catch {}
+      };
+      document.addEventListener("click", reqOnGesture, { once: true });
+      return () => {
+        document.removeEventListener("click", reqOnGesture);
+        window.removeEventListener("deviceorientation", onOrientation);
+        window.removeEventListener("orientationchange", recalibrate);
+      };
+    }
+
+    start();
+    return () => {
+      window.removeEventListener("deviceorientation", onOrientation);
+      window.removeEventListener("orientationchange", recalibrate);
+    };
+  }, [rawX, rawY]);
 
   return (
     <div
@@ -115,6 +173,8 @@ export default function PhotoDetailClient({
             maxWidth: isPortrait ? "min(480px, 90vw)" : "min(820px, 90vw)",
             position: "relative",
             boxShadow: "0 20px 60px color-mix(in oklab, var(--foreground) 12%, transparent)",
+            x: imgX,
+            y: imgY,
           }}
         >
           <Image

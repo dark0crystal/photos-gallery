@@ -48,7 +48,7 @@ const Projects: React.FC<ProjectsProps> = ({ activeMenu, setActiveMenu }) => {
               className={`${styles.item} w-full py-5`}
             >
               <p
-                className={`${styles.title} text-start text-[clamp(1.1rem,3.2vw,2.75rem)] font-bold leading-none text-black md:text-white`}
+                className={`${styles.title} text-start text-[clamp(1.1rem,3.2vw,2.75rem)] font-bold leading-none text-foreground md:text-white`}
               >
                 {project.title}
               </p>

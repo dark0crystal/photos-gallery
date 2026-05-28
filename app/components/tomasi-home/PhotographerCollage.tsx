@@ -216,6 +216,57 @@ export function PhotographerCollage({
     };
   }, [rawX, rawY, reduced]);
 
+  // Gyroscope parallax — mobile/tablet only
+  useEffect(() => {
+    if (typeof window === "undefined" || reduced) return;
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+
+    let base = { beta: 0, gamma: 0, calibrated: false };
+
+    const onOrientation = (e: DeviceOrientationEvent) => {
+      const beta = e.beta ?? 0;
+      const gamma = e.gamma ?? 0;
+      if (!base.calibrated) {
+        base.beta = beta;
+        base.gamma = gamma;
+        base.calibrated = true;
+      }
+      rawX.set(Math.max(-1, Math.min(1, (gamma - base.gamma) / 20)));
+      rawY.set(Math.max(-1, Math.min(1, (beta - base.beta) / 20)));
+    };
+
+    const recalibrate = () => {
+      base = { beta: 0, gamma: 0, calibrated: false };
+    };
+
+    const start = () => {
+      window.addEventListener("deviceorientation", onOrientation, { passive: true });
+      window.addEventListener("orientationchange", recalibrate, { passive: true });
+    };
+
+    // iOS 13+ requires a user gesture before permission can be granted
+    if (typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission === "function") {
+      const reqOnGesture = async () => {
+        try {
+          const res = await (DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }).requestPermission();
+          if (res === "granted") start();
+        } catch {}
+      };
+      document.addEventListener("click", reqOnGesture, { once: true });
+      return () => {
+        document.removeEventListener("click", reqOnGesture);
+        window.removeEventListener("deviceorientation", onOrientation);
+        window.removeEventListener("orientationchange", recalibrate);
+      };
+    }
+
+    start();
+    return () => {
+      window.removeEventListener("deviceorientation", onOrientation);
+      window.removeEventListener("orientationchange", recalibrate);
+    };
+  }, [rawX, rawY, reduced]);
+
   let computedScale =
     layout && stageSize.w > 0 && stageSize.h > 0
       ? Math.min(

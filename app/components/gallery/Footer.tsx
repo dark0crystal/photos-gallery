@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useGalleryContext } from "./GalleryProjectsContext";
 
 const Footer = () => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import Lenis from "lenis";
 import { ThemeProvider } from "@/app/components/theme/ThemeProvider";
 import ThemeToggle from "@/app/components/theme/ThemeToggle";
 import { TransitionProvider } from "./components/transitions/TransitionContext";
@@ -9,6 +11,22 @@ import MusicButton from "./components/music/MusicButton";
 import SplashGate from "./components/splash/SplashGate";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const lenis = new Lenis();
+    let frame = 0;
+
+    function raf(time: number) {
+      lenis.raf(time);
+      frame = requestAnimationFrame(raf);
+    }
+
+    frame = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      lenis.destroy();
+    };
+  }, []);
   return (
     <ThemeProvider>
       <MusicProvider>
